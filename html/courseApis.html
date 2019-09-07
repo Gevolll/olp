@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Course Api</title>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.js"></script>
+  </head>
+
+  <body>
+    <div id="leftCol" style="float:left; width:500px;">
+      <p>Course Title:</p>
+      <input type="text" id="courseTitle">
+      <p>Description:</p>
+      <textarea id="courseDes" rows="10" cols="50"></textarea>
+      <p>Topics</p>
+      <button type="button" id="addTopic">Add a Topic</button>
+      <div id="addTopicDiv"></div>
+      <div id="topicDetail"></div>
+      <hr>
+      <button type="button" id="createCourse">Create</button>
+    </div>
+    <div id="rightCol" style="float:left;">
+      <h1>Course List - test User, Userid = 1234567890</h1>
+      <button type="button" id="getTeacherCourseList">Get Teacher Course List</button>
+      <button type="button" id="getStudentCourseList">Get Student Course List</button>
+      <button type="button" id="flush">Flush Page</button>
+      <div id="courseContent">
+        <ul id="courseList">
+
+        </ul>
+      </div>
+    </div>
+  </body>
+
+  <script type="text/javascript">
+    var staticUserId = '1234567890';
+    var topicCount = 0;
+    $("#addTopic").click(function() {
+      // add topic 按钮点击
+      $("#addTopicDiv").append("<input type='text', id='topicTitle'>");
+      $("#addTopicDiv").append("<button type='button' id='saveTopic'>Save</button>");
+      $("#addTopicDiv").append("<button type='button' id='cancelTopic'>Cancel</button>");
+    });
+    $("#addTopicDiv").on("click", "#saveTopic", function() {
+      // save topic 按钮点击
+      topicCount = topicCount + 1;
+      var topicTitle = $("#topicTitle").val();
+      var thisTopicDiv = "#topic"+topicCount;
+      $("#addTopicDiv").html("");
+      $("#topicDetail").append("<div id='topic"+topicCount+"'>");
+      $(thisTopicDiv).append("<p>"+topicTitle+"</p>");
+      $(thisTopicDiv).append("<button type='button' class='deleteTopic' topicId="+topicCount+">Delete</button>");
+    });
+    $("#addTopicDiv").on("click", "#cancelTopic", function() {
+      $("#addTopicDiv").html("");
+    });
+    $("#topicDetail").on("click", ".deleteTopic", function() {
+      var thisTopicDiv = "#"+$(this).parent()[0].id;
+      $(thisTopicDiv).remove();
+      // console.log($(this).parent()[0].id);
+    });
+    $("#createCourse").click(function() {
+      var courseTitle = $("#courseTitle").val();
+      var courseDescription = $("#courseDes").val();
+      if(topicCount) {
+        var topics = new Array(topicCount);
+        for (var i = 0; i < topicCount; i++) {
+          var topicId = "#topic"+(i+1);
+          topics[i] = {
+            "topicTitle": $(topicId).children("p").text()
+          };
+        }
+      }
+      else {
+        topics = [];
+      }
+      data = {
+        "userId": staticUserId,
+        "courseTitle": courseTitle,
+        "courseDescription": courseDescription,
+        "topics": {
+          "count": topicCount,
+          "details": topics
+        }
+      }
+      $.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:8000/createCourse',
+        data: JSON.stringify(data),
+        success: function(resp) {
+          console.log(resp.courseId, resp.courseDetail);
+        },
+        contentType: "application/json",
+        dataType: "json"
+      });
+    });
+    $("#getTeacherCourseList").click(function() {
+      data = {
+        "userId": staticUserId,
+        "character": 1
+      };
+      $.ajax({
+        type: 'GET',
+        url: 'http://127.0.0.1:8000/teacherCourseList',
+        data: data,
+        success: function(resp) {
+          //console.log(resp)
+          var courseContentList = $("#courseList");
+          var courseCount = resp.count;
+          var courseDetail = resp.courses;
+          for(var i = 0; i < courseCount; i++) {
+            var courseTitle = "Title: "+courseDetail[i].title;
+            var topicCount = courseDetail[i].count;
+            var topicList = courseDetail[i].topicList;
+            courseContentList.append("<li>"+courseTitle+"</li>");
+            for(var j = 0; j < topicCount; j++) {
+              var topicTitle = "Topic "+(j+1)+": "+topicList[j];
+              courseContentList.append("<li>"+topicTitle+"</li>");
+            }
+          }
+        },
+        //contentType: "application/json",
+        dataType: "json"
+      });
+    });
+    $("#getStudentCourseList").click(function() {
+      data = {
+        "userId": staticUserId,
+        "character": 0
+      };
+      $.ajax({
+        type: 'GET',
+        url: 'http://127.0.0.1:8000/studentCourseList',
+        data: data,
+        success: function(resp) {
+          var courseContentList = $("#courseList");
+          var courseCount = resp.count;
+          var courseDetail = resp.courses;
+          for(var i = 0; i < courseCount; i++) {
+            var courseTitle = "Title: "+courseDetail[i].title;
+            var courseDescription = "Description: "+courseDetail[i].description;
+            var courseId = "Course ID: "+courseDetail[i].id;
+            var teacher = "Teacher ID: "+courseDetail[i].teacher;
+            courseContentList.append("<li>"+courseTitle+"</li>");
+            courseContentList.append("<li>"+courseDescription+"</li>");
+            courseContentList.append("<li>"+courseId+"</li>");
+            courseContentList.append("<li>"+teacher+"</li>");
+          }
+        },
+        dataType: "json"
+      });
+    });
+    $("#flush").click(function() {
+      $("#courseList").html("");
+    })
+  </script>
+</html>
